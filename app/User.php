@@ -15,6 +15,12 @@ class User extends Authenticatable
      *
      * @var array
      */
+    public $table='users';
+    
+    public function persona(){
+        return $this->belongsTo('App\persona');
+    }
+
     protected $fillable = [
         'name', 'email', 'password',
     ];
