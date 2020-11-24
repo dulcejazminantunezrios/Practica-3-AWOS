@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
+Route::middleware('auth:sanctum')->get('users','UserController@read');
 
 //PERSONAS
 Route::get("persona","PersonaController@read");
@@ -49,3 +50,13 @@ Route::delete("logout","UserController@logout");
 Route::get("compe/{id}","ComentarioController@c_pe")->where("id","[1-101]+");
 Route::get("compd/{id}","ComentarioController@c_pd")->where("id","[1-101]+");
 Route::get("compdpe","ComentarioController@c_pd_pe");
+
+//ARCHIVOS
+Route::post('upload','FilesController@SavePublic')->middleware('Files');
+Route::post('photo','FilesController@SavePrivate')->middleware('Files');
+Route::post('download','FilesController@Down');
+Route::get('valida/{id}','PermisosController@permisos');
+
+
+//EMAIL
+//Route::post('mail', 'MailController@MandarCorreo');

@@ -18,6 +18,8 @@ class CreateProductosTable extends Migration
             $table->string("nombre_p");
             $table->text("descripcion");
             $table->float("precio");
+            $table->unsignedBigInteger('persona');
+            $table->foreign('persona')->references('id')->on('personas');
             $table->timestamps();
         });
     }

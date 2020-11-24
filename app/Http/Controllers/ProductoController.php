@@ -5,6 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\producto;
+use Illuminate\Support\Facades\DB;
+use App\User;
+use Illuminate\Support\Facades\Mail;
+use Laravel\Sanctum\HasApiTokens;
+use App\Mail\ProductoNew;
 
 class ProductoController extends Controller
 {
@@ -17,11 +22,14 @@ class ProductoController extends Controller
 
     public function create(Request $request){
         $pd=new producto;
+        $user=$request->user();
         $pd->nombre_p=$request->nombre_p;
         $pd->descripcion=$request->descripcion;
         $pd->precio=$request->precio;
+        $pd->persona=$request->persona;
         if($pd->save()){
             return response()->json(["El producto ha sido creado:"=>$pd],201);
+            Mail::to($user->email)->send(new ProductoNew());
         }
         return response()->json(["No se pudo crear :("],400);
     }
@@ -31,6 +39,7 @@ class ProductoController extends Controller
         $pd=producto::find($id);
         $pd->nombre_p=$request->nombre_p;
         $pd->descripcion=$request->descripcion;
+        $pd->persona=$request->persona;
         $pd->precio=$request->precio;    
         if($pd->save())
             return response()->json(["El producto ha sido actualizado:"=>$pd],201);

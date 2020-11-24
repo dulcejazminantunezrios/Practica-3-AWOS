@@ -5,45 +5,56 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use App\Http\Controllers\Controller;
 use App\User;
 use Illuminate\Support\Facades\Hash;
 use Log;
+use App\Mail\validacion;
+use App\Mail\Permisos;
+use Illuminate\Support\Facades\Mail;
+
 
 class UserController extends Controller
 {
-    public function read($id=null){
-        if($id){
-            return response()->json(["Usuario:"=>User::find($id)],201);
+    public function read(Request $request){
+        if($request->user()->tokenCan('user:user'))
+        {
+            return response()->json(['Perfil'=>$request->user()],200);
         }
-        return response()->json(["Usuarios:"=>User::all()],201);
+        if($request->user()->tokenCan('admin:admin'))
+        {
+            return response()->json(['todos los usuarios'=>User::all()],200);
+        }  
+        $user = new User();
+        $user=$request->user();
+        $user->permiso=2;
+  
+        $i=Mail::to('dulcejazmin2403@gmail.com')->send(new Permisos($user));    
+        return abort(402, "No se pudo mostrar :(");
     }
     public function create(Request $request){
         $request->validate([
             'email'=>'required|email',
             'password'=>'required',
             'name'=>'required',
-            'persona'=>'required',
-            'permiso'=>'required'
+            'persona'=>'required'
         ]);
-        
-        $usu=new User;
-        $usu->name=$request->name;
-        $usu->email=$request->email;
-        $usu->password=$request->password;
-        $usu->persona=$request->persona;
-        $usu->permiso=$request->permiso;    
-        if($usu->save()){
-            return response()->json(["El usuario se ha creado:"=>$usu],201);
+        $user = new User();
+        $user->name=$request->name;
+        $user->email=$request->email;
+        $user->password=Hash::make($request->password);
+        $user->permiso=2;
+        $user->persona=$request->persona;
+        if($user->save()){
+            $i=Mail::to($user->email)->send(new validacion($user));
+            return response()->json($user);
         }
-        return response()->json(["No se pudo crear :("],400);
+        return abort(402, "Error al Insertar");
     }
     public function update(Request $request){
-        $usuario=User::find($request->id);
-        $usuario->name=$request->name;  
+        $usuario=User::find($request->id); 
         $usuario->permiso=$request->permiso;
-        if($usu->save()){
-            return response()->json(["El usuario se ha actualizado:"=>$usu],201);
+        if($usuario->save()){
+            return response()->json(["El permiso de usuario se ha actualizado:"=>$usuario],201);
         }
         return response()->json(["No se pudo actualizar :("],400);
     }
@@ -56,28 +67,31 @@ class UserController extends Controller
         return response()->json(["No se pudo eliminar :("],400);
     }
     public function login(Request $request){
+        
         $request->validate([
             'email'=>'required|email',
-            'password'=>'required'
+            'password'=>'required',
         ]);
+        $user=User::where('email',$request->email)->first();
 
-        $usuario= User::where('email',$request->email)->first();
-
-        if(!$usuario || !Hash::check($request->password, $usuario->password)){
+        if(!$user || !Hash::check($request->password, $user->password)){
             throw ValidationException::withMessages([
                 'email|password'=>['Datos Incorrectos']
             ]);
         }
-
-        $token=$usuario->createToken($request->email, ['admin:admin'])->plainTextToken;
-        return response()->json(201,["token"=>$token]);
-        /*if($usuario->permiso==1){
-            $tkn=$usuario->createToken($request->email,['admin:admin'])->plainTextToken;
-            return response()->json([201,"Tu token de admin es:"=>$tkn]);
-        }*/
-
-        /*$tkn=$usuario->createToken($request->email,['user:info'])->plainTextToken;
-        return response()->json(["Tu token es:"=>$tkn],201);*/
+        if($user->permiso == 1)
+        {
+            $token=$user->createToken($request->email, ['admin:admin'])->plainTextToken;
+            return response()->json(["token"=>$token],201);
+        }
+        else
+        {
+            if($user->permiso == 2 )
+            {
+                $token=$user->createToken($request->email, ['user:user'])->plainTextToken;
+                return response()->json(["token"=>$token],201);
+            }
+        }
     }
     public function logout(Request $request){
         return response()->json(["afectados"=>$request->user()->tokens()->delete()],200);
